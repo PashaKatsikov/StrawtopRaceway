@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ splash icon.
+  MUST be <adaptive-icon> – a flat PNG passed to windowSplashScreenAnimatedIcon
+  silently falls back to the launcher icon and looks clipped inside the circle.
+  Same inset as ic_launcher.xml so the icon on the desktop and the splash
+  are visually identical.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/launch_bg" />
+    <foreground>
+        <inset
+            android:drawable="@drawable/ic_launcher_icon"
+            android:insetTop="14%"
+            android:insetBottom="14%"
+            android:insetLeft="14%"
+            android:insetRight="14%" />
+    </foreground>
+</adaptive-icon>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Android 12+ (API 31) launch theme.
+      Inherits windowBackground from the base LaunchTheme and adds the
+      splash-screen attributes.  windowSplashScreenAnimatedIcon MUST point
+      to an <adaptive-icon> drawable – a flat PNG will be silently ignored
+      and the OS falls back to the launcher icon (clipped inside its circle).
+    -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+
+        <!-- Solid background behind the splash icon -->
+        <item name="android:windowSplashScreenBackground">@color/launch_bg</item>
+
+        <!-- The <adaptive-icon> that Android 12+ renders correctly under any mask -->
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+
+        <!-- Keep the icon background transparent so the adaptive-icon's own
+             background layer (same navy colour) shows through cleanly. -->
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/launch_bg</item>
+
+        <!-- Brand colour shown under the icon in Android 12+ (branding slot) -->
+        <item name="android:windowSplashScreenBrandingImage">@null</item>
+    </style>
+
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive launcher icon for API 26+.
+  background  – solid colour that fills mask corners (matches icon art).
+  foreground  – the icon PNG inset by 14% on every side so the full art
+                stays inside the safe zone of every mask shape (circle,
+                squircle, teardrop, …).
+  Adjust inset: raise to 17-19% if art looks cropped; lower to 10-12%
+  if it looks too small.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/launch_bg" />
+    <foreground>
+        <inset
+            android:drawable="@drawable/ic_launcher_icon"
+            android:insetTop="14%"
+            android:insetBottom="14%"
+            android:insetLeft="14%"
+            android:insetRight="14%" />
+    </foreground>
+</adaptive-icon>

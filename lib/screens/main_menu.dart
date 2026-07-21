@@ -1,0 +1,229 @@
+import 'package:flutter/material.dart';
+import '../data/assets.dart';
+import '../data/audio_service.dart';
+import '../data/catalog.dart';
+import '../data/game_state.dart';
+import '../theme/app_theme.dart';
+import '../widgets/ui_kit.dart';
+import 'world_map_screen.dart';
+import 'garage_screen.dart';
+import 'shop_screen.dart';
+import 'upgrades_screen.dart';
+import 'daily_screen.dart';
+import 'tournaments_screen.dart';
+import 'leaderboard_screen.dart';
+import 'achievements_screen.dart';
+import 'settings_screen.dart';
+import 'profile_screen.dart';
+
+class MainMenu extends StatefulWidget {
+  const MainMenu({super.key});
+
+  @override
+  State<MainMenu> createState() => _MainMenuState();
+}
+
+class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin {
+  late final AnimationController _spin =
+      AnimationController(vsync: this, duration: const Duration(seconds: 4))
+        ..repeat();
+
+  final gs = GameState.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    AudioService.instance.playMenuMusic();
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  void _go(Widget page) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page)).then((_) {
+      if (!mounted) return;
+      AudioService.instance.playMenuMusic();
+      setState(() {});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: GameBackground(
+        image: A.kitchenBg,
+        overlay: 0.5,
+        child: SafeArea(
+          child: AnimatedBuilder(
+            animation: gs,
+            builder: (context, _) {
+              return Column(
+                children: [
+                  _header(),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(flex: 5, child: _hero()),
+                          const SizedBox(width: 16),
+                          Expanded(flex: 6, child: _menuGrid()),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _header() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => _go(const ProfileScreen()),
+            child: Panel(
+              padding: const EdgeInsets.fromLTRB(6, 6, 14, 6),
+              radius: AppRadius.pill,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: AppColors.blueGradient,
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Image.asset(A.mainHero, fit: BoxFit.cover),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(gs.playerName,
+                          style: AppText.body(14, weight: FontWeight.w800)),
+                      Text('Level ${gs.playerLevel}',
+                          style: AppText.body(11, color: AppColors.textMuted)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          CurrencyChip(value: gs.coins, isGem: false, onAdd: () => _go(const ShopScreen())),
+          const SizedBox(width: 8),
+          CurrencyChip(value: gs.gems, isGem: true, onAdd: () => _go(const ShopScreen())),
+        ],
+      ),
+    );
+  }
+
+  Widget _hero() {
+    final skin = Catalog.topById(gs.equippedTop);
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        StrokeText('STRAWTOP', style: AppText.title(34, color: AppColors.yellow), strokeWidth: 5),
+        StrokeText('RACEWAY', style: AppText.title(34, color: AppColors.red), strokeWidth: 5),
+        const SizedBox(height: 4),
+        Expanded(
+          child: Center(
+            child: RotationTransition(
+              turns: _spin,
+              child: TopSprite(skin: skin, size: 130),
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 220,
+          child: ChunkyButton(
+            label: 'PLAY',
+            icon: Icons.play_arrow_rounded,
+            fontSize: 24,
+            height: 64,
+            onTap: () => _go(const WorldMapScreen()),
+          ),
+        ),
+        const SizedBox(height: 6),
+      ],
+    );
+  }
+
+  Widget _menuGrid() {
+    final items = <_MenuItem>[
+      _MenuItem('Garage', Icons.build_rounded, AppColors.blueGradient, () => _go(const GarageScreen())),
+      _MenuItem('Shop', Icons.storefront_rounded, AppColors.goldGradient, () => _go(const ShopScreen())),
+      _MenuItem('Upgrades', Icons.upgrade_rounded, AppColors.greenGradient, () => _go(const UpgradesScreen())),
+      _MenuItem('Daily', Icons.calendar_today_rounded, AppColors.redGradient, () => _go(const DailyScreen())),
+      _MenuItem('Events', Icons.emoji_events_rounded, AppColors.goldGradient, () => _go(const TournamentsScreen())),
+      _MenuItem('Ranks', Icons.leaderboard_rounded, AppColors.blueGradient, () => _go(const LeaderboardScreen())),
+      _MenuItem('Awards', Icons.military_tech_rounded, AppColors.greenGradient, () => _go(const AchievementsScreen())),
+      _MenuItem('Settings', Icons.settings_rounded, AppColors.blueGradient, () => _go(const SettingsScreen())),
+    ];
+    return GridView.count(
+      crossAxisCount: 4,
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 0.92,
+      physics: const NeverScrollableScrollPhysics(),
+      children: items.map((e) => _MenuTile(item: e)).toList(),
+    );
+  }
+}
+
+class _MenuItem {
+  _MenuItem(this.label, this.icon, this.gradient, this.onTap);
+  final String label;
+  final IconData icon;
+  final Gradient gradient;
+  final VoidCallback onTap;
+}
+
+class _MenuTile extends StatelessWidget {
+  const _MenuTile({required this.item});
+  final _MenuItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        AudioService.instance.click();
+        item.onTap();
+      },
+      child: Panel(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                gradient: item.gradient,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+              ),
+              child: Icon(item.icon, color: Colors.white, size: 26),
+            ),
+            const SizedBox(height: 8),
+            StrokeText(item.label, strokeWidth: 3, style: AppText.title(14)),
+          ],
+        ),
+      ),
+    );
+  }
+}
