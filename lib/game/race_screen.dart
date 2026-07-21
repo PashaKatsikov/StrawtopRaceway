@@ -1,3 +1,4 @@
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../data/assets.dart';
@@ -175,26 +176,18 @@ class _RaceScreenState extends State<RaceScreen>
       child: AnimatedBuilder(
         animation: engine,
         builder: (context, _) => Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Column(
             children: [
+              // ── compact top bar ──────────────────────────────────────────
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Energy + progress.
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _energyBar(),
-                        const SizedBox(height: 8),
-                        _progressBar(),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  _coinChip(),
+                  // Left pill: energy + progress stacked
+                  Expanded(child: _barPill()),
                   const SizedBox(width: 8),
+                  _coinChip(),
+                  const SizedBox(width: 6),
                   _pauseButton(),
                 ],
               ),
@@ -207,70 +200,162 @@ class _RaceScreenState extends State<RaceScreen>
     );
   }
 
-  Widget _energyBar() {
-    return Row(
-      children: [
-        Image.asset(A.barSpinning, width: 26, height: 26),
-        const SizedBox(width: 6),
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            child: Stack(
-              children: [
-                Container(height: 16, color: AppColors.ink),
-                FractionallySizedBox(
-                  widthFactor: (engine.energy / 100).clamp(0.0, 1.0),
-                  child: Container(
-                    height: 16,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [
-                        engine.energy < 30 ? AppColors.red : AppColors.green,
-                        engine.energy < 30 ? AppColors.redDark : AppColors.greenDark,
-                      ]),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+  /// Reusable glassy pill decoration used across the HUD.
+  BoxDecoration _glassPill({Color? accent}) => BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.ink.withValues(alpha: 0.62),
+            AppColors.navy.withValues(alpha: 0.58),
+          ],
         ),
-      ],
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(
+          color: (accent ?? Colors.white).withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (accent ?? Colors.black).withValues(alpha: 0.28),
+            blurRadius: 12,
+            spreadRadius: -3,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      );
+
+  /// Single glassy pill containing the two compact bars.
+  Widget _barPill() {
+    final energyColor =
+        engine.energy < 30 ? AppColors.red : AppColors.green;
+    final energyColorDark =
+        engine.energy < 30 ? AppColors.redDark : AppColors.greenDark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: _glassPill(
+          accent: engine.energy < 30 ? AppColors.red : AppColors.green),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Energy row
+          Row(
+            children: [
+              Image.asset(A.barSpinning, width: 16, height: 16),
+              const SizedBox(width: 5),
+              Expanded(child: _thinBar(
+                value: (engine.energy / 100).clamp(0.0, 1.0),
+                fill: LinearGradient(colors: [energyColor, energyColorDark]),
+                h: 8,
+              )),
+              const SizedBox(width: 5),
+              SizedBox(
+                width: 28,
+                child: Text(
+                  '${engine.energy.round()}',
+                  style: AppText.body(9,
+                      weight: FontWeight.w800,
+                      color: Colors.white.withValues(alpha: 0.85)),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          // Progress row
+          Row(
+            children: [
+              const Icon(Icons.flag_rounded,
+                  color: Colors.white60, size: 14),
+              const SizedBox(width: 5),
+              Expanded(child: _thinBar(
+                value: engine.progress,
+                fill: const LinearGradient(
+                    colors: [AppColors.yellow, AppColors.yellowDark]),
+                h: 6,
+              )),
+              const SizedBox(width: 5),
+              SizedBox(
+                width: 28,
+                child: Text(
+                  '${(engine.progress * 100).round()}%',
+                  style: AppText.body(9,
+                      weight: FontWeight.w800,
+                      color: Colors.white.withValues(alpha: 0.85)),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _progressBar() {
-    return Row(
-      children: [
-        const Icon(Icons.flag_rounded, color: Colors.white70, size: 18),
-        const SizedBox(width: 6),
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            child: LinearProgressIndicator(
-              value: engine.progress,
-              minHeight: 8,
-              backgroundColor: Colors.black45,
-              valueColor: const AlwaysStoppedAnimation(AppColors.yellow),
+  Widget _thinBar({
+    required double value,
+    required Gradient fill,
+    required double h,
+  }) {
+    final glowColor = (fill is LinearGradient && fill.colors.isNotEmpty)
+        ? fill.colors.first
+        : Colors.white;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+      child: Stack(
+        children: [
+          Container(height: h, color: Colors.white.withValues(alpha: 0.12)),
+          FractionallySizedBox(
+            widthFactor: value.clamp(0.0, 1.0),
+            child: Container(
+              height: h,
+              decoration: BoxDecoration(
+                gradient: fill,
+                boxShadow: [
+                  BoxShadow(
+                    color: glowColor.withValues(alpha: 0.55),
+                    blurRadius: 6,
+                    spreadRadius: -1,
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+          // Glossy top highlight along the whole track.
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: Container(
+              height: h * 0.45,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.35),
+                    Colors.white.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _coinChip() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.ink.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: _glassPill(accent: AppColors.yellow),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Image.asset(A.coin, width: 22, height: 22),
-          const SizedBox(width: 6),
+          Image.asset(A.coin, width: 18, height: 18),
+          const SizedBox(width: 4),
           Text('${engine.coins}',
-              style: AppText.body(15, weight: FontWeight.w800)),
+              style: AppText.body(13, weight: FontWeight.w800)),
         ],
       ),
     );
@@ -280,39 +365,63 @@ class _RaceScreenState extends State<RaceScreen>
     return GestureDetector(
       onTap: () => engine.pause(),
       child: Container(
-        width: 40,
-        height: 40,
+        width: 34,
+        height: 34,
         decoration: BoxDecoration(
-          color: AppColors.panelLight,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white24, width: 2),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.panelLight, AppColors.panel],
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: AppColors.glassHi, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
-        child: const Icon(Icons.pause_rounded, color: Colors.white),
+        child: const Icon(Icons.pause_rounded, color: Colors.white, size: 18),
       ),
     );
   }
 
   Widget _buffRow() {
     final buffs = <Widget>[];
-    if (engine.shieldActive) buffs.add(_buffIcon(A.shieldBuff));
-    if (engine.boostActive) buffs.add(_buffIcon(A.powerUp));
-    if (engine.magnetActive) buffs.add(_buffIcon(A.beckonsBuff));
-    if (buffs.isEmpty) return const SizedBox(height: 40);
+    if (engine.shieldActive) buffs.add(_buffIcon(A.shieldBuff, AppColors.blue));
+    if (engine.boostActive) buffs.add(_buffIcon(A.powerUp, AppColors.yellow));
+    if (engine.magnetActive) buffs.add(_buffIcon(A.beckonsBuff, AppColors.pink));
+    if (buffs.isEmpty) return const SizedBox(height: 32);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: buffs,
     );
   }
 
-  Widget _buffIcon(String asset) => Padding(
+  Widget _buffIcon(String asset, Color accent) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: AppColors.ink.withValues(alpha: 0.55),
+            gradient: RadialGradient(
+              colors: [
+                accent.withValues(alpha: 0.5),
+                AppColors.ink.withValues(alpha: 0.6),
+              ],
+            ),
             shape: BoxShape.circle,
+            border: Border.all(color: accent.withValues(alpha: 0.7), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: accent.withValues(alpha: 0.55),
+                blurRadius: 12,
+                spreadRadius: -1,
+              ),
+            ],
           ),
-          child: Image.asset(asset, width: 34, height: 34),
+          child: Image.asset(asset, width: 26, height: 26),
         ),
       );
 
@@ -321,12 +430,32 @@ class _RaceScreenState extends State<RaceScreen>
       animation: engine,
       builder: (context, _) {
         if (engine.status != RaceStatus.ready) return const SizedBox.shrink();
-        final label = engine.readyCountdown > 0 ? '${engine.readyCountdown}' : 'GO!';
+        final go = engine.readyCountdown <= 0;
+        final label = go ? 'GO!' : '${engine.readyCountdown}';
         return Container(
-          color: Colors.black.withValues(alpha: 0.35),
+          decoration: const BoxDecoration(
+            gradient: RadialGradient(
+              radius: 0.9,
+              colors: [Color(0x66000000), Color(0xB3000000)],
+            ),
+          ),
           alignment: Alignment.center,
-          child: StrokeText(label,
-              strokeWidth: 8, style: AppText.title(90, color: AppColors.yellow)),
+          // Each value gets a fresh key so it pops in with a scale bounce.
+          child: TweenAnimationBuilder<double>(
+            key: ValueKey(label),
+            tween: Tween(begin: 0.4, end: 1.0),
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.elasticOut,
+            builder: (_, v, child) =>
+                Transform.scale(scale: v, child: child),
+            child: GradientText(
+              label,
+              strokeWidth: 9,
+              style: AppText.title(96),
+              gradient:
+                  go ? AppColors.greenGradient : AppColors.goldGradient,
+            ),
+          ),
         );
       },
     );
@@ -337,35 +466,46 @@ class _RaceScreenState extends State<RaceScreen>
       animation: engine,
       builder: (context, _) {
         if (engine.status != RaceStatus.paused) return const SizedBox.shrink();
-        return Container(
-          color: Colors.black.withValues(alpha: 0.7),
-          alignment: Alignment.center,
-          child: Panel(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                StrokeText('PAUSED', style: AppText.title(28)),
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: 220,
-                  child: ChunkyButton(
-                    label: 'RESUME',
-                    icon: Icons.play_arrow_rounded,
-                    onTap: () => engine.resume(),
+        // Frosted glass over the frozen game frame.
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Container(
+            color: Colors.black.withValues(alpha: 0.55),
+            alignment: Alignment.center,
+            child: Panel(
+              padding: const EdgeInsets.all(26),
+              glow: AppColors.purple,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GradientText('PAUSED',
+                      style: AppText.title(30),
+                      gradient: AppColors.sunsetGradient,
+                      strokeWidth: 5),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: 220,
+                    child: PulseGlow(
+                      color: AppColors.green,
+                      child: ChunkyButton(
+                        label: 'RESUME',
+                        icon: Icons.play_arrow_rounded,
+                        onTap: () => engine.resume(),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: 220,
-                  child: ChunkyButton(
-                    label: 'QUIT',
-                    gradient: AppColors.redGradient,
-                    lip: AppColors.redDark,
-                    onTap: () => Navigator.pop(context),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: 220,
+                    child: ChunkyButton(
+                      label: 'QUIT',
+                      gradient: AppColors.redGradient,
+                      lip: AppColors.redDark,
+                      onTap: () => Navigator.pop(context),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );

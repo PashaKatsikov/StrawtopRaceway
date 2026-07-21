@@ -8,8 +8,8 @@ class LeaderboardScreen extends StatelessWidget {
   const LeaderboardScreen({super.key});
 
   static const List<String> _bots = [
-    'SpinKing', 'TurboTina', 'BladeMax', 'WhirlWizz', 'GyroGus',
-    'AceOfTops', 'ZippyZoe', 'RustyRon', 'NovaNina', 'BoltBoy',
+    'CluckKing', 'TurboTina', 'BeakMax', 'WingWizz', 'EggGus',
+    'AceOfEggs', 'ZippyZoe', 'RoosterRon', 'NovaNina', 'CluckNorris',
     'CometCleo', 'DizzyDan',
   ];
 

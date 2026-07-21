@@ -23,7 +23,6 @@ class _StrawtopAppState extends State<StrawtopApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
   }
-
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);

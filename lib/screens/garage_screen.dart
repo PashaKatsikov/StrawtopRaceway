@@ -47,7 +47,7 @@ class _GarageScreenState extends State<GarageScreen>
             animation: gs,
             builder: (context, _) => Column(
               children: [
-                TopBar(title: 'Garage', onBack: () => Navigator.pop(context)),
+                TopBar(title: 'Coop', onBack: () => Navigator.pop(context)),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),

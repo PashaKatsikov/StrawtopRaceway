@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../data/assets.dart';
 import '../data/audio_service.dart';
@@ -23,10 +24,14 @@ class MainMenu extends StatefulWidget {
   State<MainMenu> createState() => _MainMenuState();
 }
 
-class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin {
+class _MainMenuState extends State<MainMenu> with TickerProviderStateMixin {
   late final AnimationController _spin =
       AnimationController(vsync: this, duration: const Duration(seconds: 4))
         ..repeat();
+
+  late final AnimationController _intro =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
+        ..forward();
 
   final gs = GameState.instance;
 
@@ -39,6 +44,7 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
   @override
   void dispose() {
     _spin.dispose();
+    _intro.dispose();
     super.dispose();
   }
 
@@ -137,8 +143,32 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        StrokeText('STRAWTOP', style: AppText.title(34, color: AppColors.yellow), strokeWidth: 5),
-        StrokeText('RACEWAY', style: AppText.title(34, color: AppColors.red), strokeWidth: 5),
+        AnimatedBuilder(
+          animation: _spin,
+          builder: (_, _) {
+            final dx = math.sin(_spin.value * math.pi * 2);
+            return Column(
+              children: [
+                GradientText('STRAWTOP',
+                    style: AppText.title(36),
+                    gradient: LinearGradient(
+                      begin: Alignment(-1 + dx, -1),
+                      end: Alignment(1 + dx, 1),
+                      colors: const [Color(0xFFFFE066), AppColors.yellow, Color(0xFFFFF6D0), AppColors.yellowDark],
+                    ),
+                    strokeWidth: 6),
+                GradientText('RACEWAY',
+                    style: AppText.title(36),
+                    gradient: LinearGradient(
+                      begin: Alignment(-1 - dx, -1),
+                      end: Alignment(1 - dx, 1),
+                      colors: const [AppColors.pink, Color(0xFFFF8A5C), Color(0xFFFFE066), AppColors.pink],
+                    ),
+                    strokeWidth: 6),
+              ],
+            );
+          },
+        ),
         const SizedBox(height: 4),
         Expanded(
           child: Center(
@@ -150,12 +180,15 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
         ),
         SizedBox(
           width: 220,
-          child: ChunkyButton(
-            label: 'PLAY',
-            icon: Icons.play_arrow_rounded,
-            fontSize: 24,
-            height: 64,
-            onTap: () => _go(const WorldMapScreen()),
+          child: PulseGlow(
+            color: AppColors.green,
+            child: ChunkyButton(
+              label: 'PLAY',
+              icon: Icons.play_arrow_rounded,
+              fontSize: 24,
+              height: 64,
+              onTap: () => _go(const WorldMapScreen()),
+            ),
           ),
         ),
         const SizedBox(height: 6),
@@ -165,7 +198,7 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
 
   Widget _menuGrid() {
     final items = <_MenuItem>[
-      _MenuItem('Garage', Icons.build_rounded, AppColors.blueGradient, () => _go(const GarageScreen())),
+      _MenuItem('Coop', Icons.home_rounded, AppColors.blueGradient, () => _go(const GarageScreen())),
       _MenuItem('Shop', Icons.storefront_rounded, AppColors.goldGradient, () => _go(const ShopScreen())),
       _MenuItem('Upgrades', Icons.upgrade_rounded, AppColors.greenGradient, () => _go(const UpgradesScreen())),
       _MenuItem('Daily', Icons.calendar_today_rounded, AppColors.redGradient, () => _go(const DailyScreen())),
@@ -180,7 +213,10 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
       crossAxisSpacing: 12,
       childAspectRatio: 0.92,
       physics: const NeverScrollableScrollPhysics(),
-      children: items.map((e) => _MenuTile(item: e)).toList(),
+      children: [
+        for (int i = 0; i < items.length; i++)
+          _MenuTile(item: items[i], index: i, intro: _intro),
+      ],
     );
   }
 }
@@ -194,28 +230,37 @@ class _MenuItem {
 }
 
 class _MenuTile extends StatelessWidget {
-  const _MenuTile({required this.item});
+  const _MenuTile({required this.item, required this.index, required this.intro});
   final _MenuItem item;
+  final int index;
+  final Animation<double> intro;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        AudioService.instance.click();
-        item.onTap();
-      },
+    final glow = (item.gradient as LinearGradient).colors.first;
+    final tile = Pressable(
+      onTap: item.onTap,
       child: Panel(
         padding: const EdgeInsets.all(8),
+        glow: glow.withValues(alpha: 0.35),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 gradient: item.gradient,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: glow.withValues(alpha: 0.6),
+                    blurRadius: 16,
+                    spreadRadius: -3,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Icon(item.icon, color: Colors.white, size: 26),
             ),
@@ -224,6 +269,25 @@ class _MenuTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+
+    // Staggered entrance: fade + rise, offset per tile.
+    return AnimatedBuilder(
+      animation: intro,
+      builder: (_, child) {
+        final start = (index * 0.06).clamp(0.0, 0.6);
+        final v = Curves.easeOutBack
+            .transform(((intro.value - start) / (1 - start)).clamp(0.0, 1.0));
+        final o = ((intro.value - start) / (1 - start)).clamp(0.0, 1.0);
+        return Opacity(
+          opacity: o,
+          child: Transform.translate(
+            offset: Offset(0, 22 * (1 - v)),
+            child: Transform.scale(scale: 0.8 + 0.2 * v, child: child),
+          ),
+        );
+      },
+      child: tile,
     );
   }
 }

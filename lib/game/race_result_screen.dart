@@ -79,6 +79,7 @@ class _RaceResultScreenState extends State<RaceResultScreen>
                 constraints: const BoxConstraints(maxWidth: 440),
                 child: Panel(
                 padding: const EdgeInsets.all(20),
+                glow: widget.finished ? AppColors.yellow : AppColors.red,
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -89,13 +90,13 @@ class _RaceResultScreenState extends State<RaceResultScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    StrokeText(
+                    GradientText(
                       widget.finished ? 'FINISH!' : 'CRASHED!',
                       strokeWidth: 6,
-                      style: AppText.title(34,
-                          color: widget.finished
-                              ? AppColors.yellow
-                              : AppColors.red),
+                      style: AppText.title(36),
+                      gradient: widget.finished
+                          ? AppColors.goldGradient
+                          : AppColors.redGradient,
                     ),
                     const SizedBox(height: 4),
                     Text(widget.level.name,
@@ -131,10 +132,24 @@ class _RaceResultScreenState extends State<RaceResultScreen>
           scale: anim,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Icon(
-              filled ? Icons.star_rounded : Icons.star_outline_rounded,
-              size: 64,
-              color: filled ? AppColors.yellow : Colors.white24,
+            child: Container(
+              decoration: filled
+                  ? BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.yellow.withValues(alpha: 0.6),
+                          blurRadius: 18,
+                          spreadRadius: -2,
+                        ),
+                      ],
+                    )
+                  : null,
+              child: Icon(
+                filled ? Icons.star_rounded : Icons.star_outline_rounded,
+                size: 64,
+                color: filled ? AppColors.yellow : Colors.white24,
+              ),
             ),
           ),
         );
@@ -197,17 +212,20 @@ class _RaceResultScreenState extends State<RaceResultScreen>
           const SizedBox(width: 12),
           SizedBox(
             width: 150,
-            child: ChunkyButton(
-              label: 'NEXT',
-              icon: Icons.arrow_forward_rounded,
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => RaceScreen(level: next),
-                  ),
-                );
-              },
+            child: PulseGlow(
+              color: AppColors.green,
+              child: ChunkyButton(
+                label: 'NEXT',
+                icon: Icons.arrow_forward_rounded,
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RaceScreen(level: next),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ],
@@ -216,18 +234,24 @@ class _RaceResultScreenState extends State<RaceResultScreen>
   }
 
   Widget _smallBtn(IconData icon, Gradient gradient, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: () {
-        AudioService.instance.click();
-        onTap();
-      },
+    final glow = (gradient as LinearGradient).colors.first;
+    return Pressable(
+      onTap: onTap,
       child: Container(
         width: 56,
         height: 56,
         decoration: BoxDecoration(
           gradient: gradient,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white24, width: 2),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: glow.withValues(alpha: 0.5),
+              blurRadius: 16,
+              spreadRadius: -3,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Icon(icon, color: Colors.white, size: 28),
       ),

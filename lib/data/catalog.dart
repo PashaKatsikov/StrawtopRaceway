@@ -5,11 +5,11 @@ import '../theme/app_theme.dart';
 
 /// All static game content lives here.
 class Catalog {
-  // ---- Spinning tops -------------------------------------------------------
+  // ---- Chickens (playable skins) -------------------------------------------
   static const List<TopSkin> tops = [
     TopSkin(
       id: 'rookie',
-      name: 'Rookie',
+      name: 'Lil\' Chick',
       asset: A.topDefault,
       price: 0,
       currency: Currency.coins,
@@ -17,11 +17,11 @@ class Catalog {
       baseSpeed: 4,
       baseStability: 5,
       basePower: 3,
-      tagline: 'Every champion starts here.',
+      tagline: 'Every champ starts as a chick.',
     ),
     TopSkin(
       id: 'blaze',
-      name: 'Blaze',
+      name: 'Firebeak',
       asset: A.topFire,
       price: 600,
       currency: Currency.coins,
@@ -29,11 +29,11 @@ class Catalog {
       baseSpeed: 7,
       baseStability: 4,
       basePower: 6,
-      tagline: 'Burns through the competition.',
+      tagline: 'Spicy wings, no mercy.',
     ),
     TopSkin(
       id: 'frost',
-      name: 'Frost',
+      name: 'Frostfeather',
       asset: A.topIce,
       price: 900,
       currency: Currency.coins,
@@ -41,11 +41,11 @@ class Catalog {
       baseSpeed: 5,
       baseStability: 8,
       basePower: 4,
-      tagline: 'Cool, calm, unshakeable.',
+      tagline: 'Cool, calm, unruffled.',
     ),
     TopSkin(
       id: 'voltage',
-      name: 'Voltage',
+      name: 'Zap Rooster',
       asset: A.topDefault,
       price: 1400,
       currency: Currency.coins,
@@ -54,11 +54,11 @@ class Catalog {
       baseSpeed: 8,
       baseStability: 5,
       basePower: 5,
-      tagline: 'Shockingly fast.',
+      tagline: 'Shockingly fast cluck.',
     ),
     TopSkin(
       id: 'venom',
-      name: 'Venom',
+      name: 'Toxic Hen',
       asset: A.topDefault,
       price: 1800,
       currency: Currency.coins,
@@ -67,11 +67,11 @@ class Catalog {
       baseSpeed: 6,
       baseStability: 7,
       basePower: 7,
-      tagline: 'Toxic to rivals.',
+      tagline: 'Poultry in motion.',
     ),
     TopSkin(
       id: 'shadow',
-      name: 'Shadow',
+      name: 'Shadow Hen',
       asset: A.topDefault,
       price: 60,
       currency: Currency.gems,
@@ -80,11 +80,11 @@ class Catalog {
       baseSpeed: 8,
       baseStability: 8,
       basePower: 8,
-      tagline: 'Strikes from the dark.',
+      tagline: 'Pecks from the dark.',
     ),
     TopSkin(
       id: 'champion',
-      name: 'Champion',
+      name: 'Golden Rooster',
       asset: A.topFire,
       price: 120,
       currency: Currency.gems,
@@ -93,7 +93,7 @@ class Catalog {
       baseSpeed: 9,
       baseStability: 9,
       basePower: 9,
-      tagline: 'The legend of the raceway.',
+      tagline: 'The legend of the coop.',
     ),
   ];
 
@@ -141,10 +141,10 @@ class Catalog {
     final list = <GameLevel>[];
     final names = [
       'Warm-Up',
-      'First Spin',
+      'First Flap',
       'Tight Turns',
       'Rush Hour',
-      'Danger Zone',
+      'Fox Alert',
       'Champion Run',
     ];
     for (final loc in locations) {
@@ -285,14 +285,14 @@ class Catalog {
         metric: 'stars'),
     Achievement(
         id: 'tops_3',
-        title: 'Collector',
-        description: 'Own 3 spinning tops',
+        title: 'Flock Starter',
+        description: 'Own 3 chickens',
         goal: 3,
         rewardGems: 20,
         metric: 'tops'),
     Achievement(
         id: 'wins_25',
-        title: 'Raceway Legend',
+        title: 'Coop Legend',
         description: 'Win 25 races',
         goal: 25,
         rewardGems: 60,
