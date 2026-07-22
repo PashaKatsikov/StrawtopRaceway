@@ -13,11 +13,18 @@ class RacePainter extends CustomPainter {
   final ImageBank bank = ImageBank.instance;
 
   // Source regions sampled from direct_road.webp (a framed board sprite).
-  // We deliberately avoid the rope corners so vertical tiling is seamless.
+  // The board art has three printed white chevrons baked into it (roughly at
+  // height fractions 0.152-0.308, 0.402-0.561 and 0.647-0.806). The wood
+  // sample MUST sit entirely in a clean gap between them – a previous crop
+  // (0.275-0.385) clipped into the tail of the first chevron, so every time
+  // that tile repeated it showed a mangled sliver of a chevron that looked
+  // like a glitching/blinking triangle right after the start. This crop sits
+  // safely inside the gap between chevron 1 and chevron 2, with margin to
+  // spare on both sides, and (like before) well clear of the rope corners.
   static const double _woodL = 0.150;
   static const double _woodR = 0.850;
-  static const double _woodT = 0.275;
-  static const double _woodB = 0.385;
+  static const double _woodT = 0.320;
+  static const double _woodB = 0.390;
   static const double _railLL = 0.055;
   static const double _railLR = 0.140;
   static const double _railRL = 0.860;
@@ -28,10 +35,19 @@ class RacePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     engine.size = size;
+    // Computed once so the start/finish bands stay in sync with each other.
+    final topScreenY = size.height * engine.topYFactor;
+    final startY = topScreenY + engine.distance;
+    final finishY = topScreenY - (engine.level.distance - engine.distance);
+
     _paintBackground(canvas, size);
     _paintRoad(canvas, size);
-    _paintChevrons(canvas, size);
-    _paintStartFinish(canvas, size);
+    // NOTE: the animated lane-direction chevrons were removed entirely –
+    // no matter how the fade/exclusion zones were tuned, they kept visually
+    // fighting with the checkered bands and the top's fixed screen position
+    // and reading as flicker. Removing them is the only way to guarantee
+    // zero flicker on the road.
+    _paintStartFinish(canvas, size, startY, finishY);
     _paintPuffs(canvas);
     _paintEntities(canvas);
     _paintTop(canvas, size);
@@ -90,7 +106,7 @@ class RacePainter extends CustomPainter {
     final W = road.width.toDouble();
     final H = road.height.toDouble();
 
-    // Wood lane (seamless, flip alternate tiles so plank seams line up).
+    // Wood lane.
     final woodSrc = Rect.fromLTRB(_woodL * W, _woodT * H, _woodR * W, _woodB * H);
     _tileVertical(
       canvas, road, woodSrc,
@@ -114,63 +130,22 @@ class RacePainter extends CustomPainter {
     final tileH = w * (src.height / src.width);
     final paint = Paint()..filterQuality = FilterQuality.low;
     final startY = -tileH + (scrollOffset % tileH);
-    int idx = 0;
+    // Every copy is drawn in the SAME orientation (no mirroring). Flipping
+    // alternate copies used to be how plank seams were disguised, but the
+    // source crop isn't left/right symmetric (the rails in particular carry
+    // a run of coloured rope segments), so mirrored copies showed that
+    // content reversed – every other tile boundary looked like a glitch as
+    // it scrolled past. A plain, unflipped repeat has at most a faint,
+    // perfectly static seam line, which is far less noticeable than a
+    // reversed pattern popping in and out.
     for (double y = startY; y < screenH; y += tileH) {
       final dst = Rect.fromLTWH(x, y, w, tileH);
-      if (idx.isOdd) {
-        c.save();
-        c.translate(0, y + tileH / 2);
-        c.scale(1, -1);
-        c.translate(0, -(y + tileH / 2));
-        c.drawImageRect(img, src, dst, paint);
-        c.restore();
-      } else {
-        c.drawImageRect(img, src, dst, paint);
-      }
-      idx++;
+      c.drawImageRect(img, src, dst, paint);
     }
   }
 
-  void _paintChevrons(Canvas canvas, Size size) {
-    // Calm, sparse lane markers – one shape per marker (no doubled/overlapping
-    // copies) and a wide gap between them so they read as gentle guidance
-    // rather than a flickering strobe while scrolling fast. Each marker also
-    // fades in near the top edge and out near the bottom, so they glide in and
-    // out smoothly instead of popping on/off.
-    const spacing = 560.0;
-    final w = engine.innerWidth * 0.22;
-    final cx = engine.innerLeft + engine.innerWidth / 2;
-    final fade = size.height * 0.22;
-    final offset = engine.distance % spacing;
-    for (double y = size.height - offset + spacing; y > -80; y -= spacing) {
-      // Triangular fade: 0 at the very edges, peak in the middle band.
-      double a = 1.0;
-      if (y < fade) a = (y / fade).clamp(0.0, 1.0);
-      if (y > size.height - fade) {
-        a = ((size.height - y) / fade).clamp(0.0, 1.0);
-      }
-      if (a <= 0.02) continue;
-      final path = Path()
-        ..moveTo(cx - w / 2, y)
-        ..lineTo(cx, y - 20)
-        ..lineTo(cx + w / 2, y)
-        ..lineTo(cx + w / 2, y + 12)
-        ..lineTo(cx, y - 8)
-        ..lineTo(cx - w / 2, y + 12)
-        ..close();
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = Colors.white.withValues(alpha: 0.22 * a)
-          ..style = PaintingStyle.fill,
-      );
-    }
-  }
-
-  void _paintStartFinish(Canvas canvas, Size size) {
-    final topScreenY = size.height * engine.topYFactor;
-    final startY = topScreenY + engine.distance;
-    final finishY = topScreenY - (engine.level.distance - engine.distance);
+  void _paintStartFinish(
+      Canvas canvas, Size size, double startY, double finishY) {
     if (startY > -80 && startY < size.height + 80) {
       _checkerBand(canvas, startY, accent: AppColors.green);
       _bandLabel(canvas, startY, 'START', AppColors.green);
@@ -244,6 +219,18 @@ class RacePainter extends CustomPainter {
     final w = engine.innerWidth;
     const h = 34.0;
     final rect = Rect.fromLTWH(left, centerY - h / 2, w, h);
+
+    // Solid backing plate, comfortably larger than the checker + accent
+    // stripes. The road scrolls continuously underneath this band (tile
+    // seams, lane markers, etc.) – without a generous opaque backdrop, thin
+    // slivers of that moving content could show through right at the band's
+    // edges as it travels, which read as the road "blinking" at the start/
+    // finish line. A solid plate guarantees the band always looks like one
+    // clean, stable sign no matter what's moving beneath it.
+    canvas.drawRect(
+      Rect.fromLTWH(left - 6, centerY - h / 2 - 20, w + 12, h + 40),
+      Paint()..color = AppColors.ink,
+    );
 
     canvas.drawRect(
       Rect.fromLTWH(left, centerY - h / 2 - 5, w, 5),

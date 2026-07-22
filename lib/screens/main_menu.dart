@@ -143,32 +143,7 @@ class _MainMenuState extends State<MainMenu> with TickerProviderStateMixin {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        AnimatedBuilder(
-          animation: _spin,
-          builder: (_, _) {
-            final dx = math.sin(_spin.value * math.pi * 2);
-            return Column(
-              children: [
-                GradientText('STRAWTOP',
-                    style: AppText.title(36),
-                    gradient: LinearGradient(
-                      begin: Alignment(-1 + dx, -1),
-                      end: Alignment(1 + dx, 1),
-                      colors: const [Color(0xFFFFE066), AppColors.yellow, Color(0xFFFFF6D0), AppColors.yellowDark],
-                    ),
-                    strokeWidth: 6),
-                GradientText('RACEWAY',
-                    style: AppText.title(36),
-                    gradient: LinearGradient(
-                      begin: Alignment(-1 - dx, -1),
-                      end: Alignment(1 - dx, 1),
-                      colors: const [AppColors.pink, Color(0xFFFF8A5C), Color(0xFFFFE066), AppColors.pink],
-                    ),
-                    strokeWidth: 6),
-              ],
-            );
-          },
-        ),
+        _ShimmerTitle(spin: _spin),
         const SizedBox(height: 4),
         Expanded(
           child: Center(
@@ -216,6 +191,76 @@ class _MainMenuState extends State<MainMenu> with TickerProviderStateMixin {
       children: [
         for (int i = 0; i < items.length; i++)
           _MenuTile(item: items[i], index: i, intro: _intro),
+      ],
+    );
+  }
+}
+
+/// The shimmering "STRAWTOP RACEWAY" title. Decoupled from the top's
+/// rotation so the spin stays perfectly smooth while the (comparatively
+/// expensive, ShaderMask-based) gradient sweep only refreshes a few times a
+/// second – the sweep is slow enough that this is visually seamless but far
+/// lighter on the CPU/GPU.
+class _ShimmerTitle extends StatefulWidget {
+  const _ShimmerTitle({required this.spin});
+  final Animation<double> spin;
+
+  @override
+  State<_ShimmerTitle> createState() => _ShimmerTitleState();
+}
+
+class _ShimmerTitleState extends State<_ShimmerTitle> {
+  int _skip = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.spin.addListener(_onTick);
+  }
+
+  @override
+  void dispose() {
+    widget.spin.removeListener(_onTick);
+    super.dispose();
+  }
+
+  void _onTick() {
+    _skip++;
+    if (_skip % 4 != 0) return;
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dx = math.sin(widget.spin.value * math.pi * 2);
+    return Column(
+      children: [
+        GradientText('STRAWTOP',
+            style: AppText.title(36),
+            gradient: LinearGradient(
+              begin: Alignment(-1 + dx, -1),
+              end: Alignment(1 + dx, 1),
+              colors: const [
+                Color(0xFFFFE066),
+                AppColors.yellow,
+                Color(0xFFFFF6D0),
+                AppColors.yellowDark,
+              ],
+            ),
+            strokeWidth: 6),
+        GradientText('RACEWAY',
+            style: AppText.title(36),
+            gradient: LinearGradient(
+              begin: Alignment(-1 - dx, -1),
+              end: Alignment(1 - dx, 1),
+              colors: const [
+                AppColors.pink,
+                Color(0xFFFF8A5C),
+                Color(0xFFFFE066),
+                AppColors.pink,
+              ],
+            ),
+            strokeWidth: 6),
       ],
     );
   }

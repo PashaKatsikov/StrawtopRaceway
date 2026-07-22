@@ -25,45 +25,58 @@ class GameBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(gradient: AppColors.bgGradient),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (image != null) Image.asset(image!, fit: BoxFit.cover),
-          if (image != null)
-            // Graded scrim: darker at the bottom for readable content,
-            // lighter at the top so the art still breathes.
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.navyDeep.withValues(alpha: overlay * 0.7),
-                    AppColors.navyDeep.withValues(alpha: overlay),
-                    AppColors.navyDeep
-                        .withValues(alpha: (overlay + 0.15).clamp(0.0, 1.0)),
-                  ],
+    // Screens pushed with a normal Navigator.push stay mounted (just hidden)
+    // underneath whatever is pushed on top of them. Without this, every
+    // buried screen's animations (aurora, spin, pulse-glow…) kept ticking at
+    // 60fps forever, competing for CPU with whatever was actually on screen –
+    // that accumulated the deeper you navigated and was the main source of
+    // the app-wide lag. TickerMode transparently mutes ALL ticker-driven
+    // animation in [child] (including the aurora below) whenever this
+    // screen isn't the topmost route, and resumes it automatically when it
+    // becomes current again.
+    final isTop = ModalRoute.of(context)?.isCurrent ?? true;
+    return TickerMode(
+      enabled: isTop,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (image != null) Image.asset(image!, fit: BoxFit.cover),
+            if (image != null)
+              // Graded scrim: darker at the bottom for readable content,
+              // lighter at the top so the art still breathes.
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.navyDeep.withValues(alpha: overlay * 0.7),
+                      AppColors.navyDeep.withValues(alpha: overlay),
+                      AppColors.navyDeep.withValues(
+                          alpha: (overlay + 0.15).clamp(0.0, 1.0)),
+                    ],
+                  ),
                 ),
               ),
+            // Living, drifting glow that floats over everything.
+            if (animated) const IgnorePointer(child: AuroraLayer()),
+            // Warm glow from the top.
+            const IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(gradient: AppColors.bgGlow),
+              ),
             ),
-          // Living, drifting glow that floats over everything.
-          if (animated) const IgnorePointer(child: AuroraLayer()),
-          // Warm glow from the top.
-          const IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(gradient: AppColors.bgGlow),
+            // Edge vignette for focus.
+            const IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(gradient: AppColors.vignette),
+              ),
             ),
-          ),
-          // Edge vignette for focus.
-          const IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(gradient: AppColors.vignette),
-            ),
-          ),
-          child,
-        ],
+            child,
+          ],
+        ),
       ),
     );
   }
@@ -86,8 +99,26 @@ class _AuroraLayerState extends State<AuroraLayer>
     duration: const Duration(seconds: 24),
   )..repeat();
 
+  int _skip = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _c.addListener(_onTick);
+  }
+
+  void _onTick() {
+    // The drift is slow (24s per loop), so redrawing on every single display
+    // frame is wasted work – halving the repaint rate is visually seamless
+    // but meaningfully lighter, especially on lower-end devices.
+    _skip++;
+    if (_skip.isOdd) return;
+    setState(() {});
+  }
+
   @override
   void dispose() {
+    _c.removeListener(_onTick);
     _c.dispose();
     super.dispose();
   }
@@ -95,12 +126,9 @@ class _AuroraLayerState extends State<AuroraLayer>
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
-      child: AnimatedBuilder(
-        animation: _c,
-        builder: (_, _) => CustomPaint(
-          size: Size.infinite,
-          painter: _AuroraPainter(_c.value),
-        ),
+      child: CustomPaint(
+        size: Size.infinite,
+        painter: _AuroraPainter(_c.value),
       ),
     );
   }
