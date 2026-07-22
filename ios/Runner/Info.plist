@@ -26,6 +26,18 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Fullscreen game: hide status bar globally, no per-VC control. -->
+	<key>UIStatusBarHidden</key>
+	<true/>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+	<!-- iPad: no split-view / slide-over so the game always renders full screen. -->
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<!-- Skip the App Store "does the app use encryption?" prompt: we don't
+	     ship any non-standard crypto. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

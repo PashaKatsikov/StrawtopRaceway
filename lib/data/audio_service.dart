@@ -45,10 +45,14 @@ class AudioService {
   Future<void> init() async {
     if (_initialised) return;
     _initialised = true;
-    // CRITICAL: use "mix with others" everywhere. On Android this maps to
-    // AndroidAudioFocus.none, so a sound effect (button click, coin pickup)
-    // NEVER steals audio focus from the looping music player. Without this,
-    // every click/coin paused the music and it never came back.
+    // CRITICAL: use "mix with others" everywhere.
+    //   * Android – maps to AndroidAudioFocus.none, so a short SFX (button
+    //     click, coin pickup) NEVER steals audio focus from the looping music
+    //     player. Without this, every click/coin paused the music and it
+    //     never came back.
+    //   * iOS – maps to AVAudioSessionCategoryAmbient, which respects the
+    //     silent switch (correct for a casual game) and mixes with other apps
+    //     (e.g. the user's own music).
     final ctx = AudioContextConfig(
       focus: AudioContextConfigFocus.mixWithOthers,
     ).build();

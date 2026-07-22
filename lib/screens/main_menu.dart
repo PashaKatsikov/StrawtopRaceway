@@ -288,30 +288,49 @@ class _MenuTile extends StatelessWidget {
       child: Panel(
         padding: const EdgeInsets.all(8),
         glow: glow.withValues(alpha: 0.35),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                gradient: item.gradient,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: glow.withValues(alpha: 0.6),
-                    blurRadius: 16,
-                    spreadRadius: -3,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+        // Icon + label are laid out with MainAxisSize.min so the pair has an
+        // intrinsic height, and Center + MainAxisAlignment.center vertically
+        // centre them inside the (fixed) grid tile. A FittedBox wraps just
+        // the label so long words like "Upgrades" or "Settings" scale down
+        // to a single line instead of wrapping and pushing the column past
+        // the tile's height (the old "OVERFLOWED BY 1" bug).
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: item.gradient,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: glow.withValues(alpha: 0.6),
+                      blurRadius: 16,
+                      spreadRadius: -3,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(item.icon, color: Colors.white, size: 26),
               ),
-              child: Icon(item.icon, color: Colors.white, size: 26),
-            ),
-            const SizedBox(height: 8),
-            StrokeText(item.label, strokeWidth: 3, style: AppText.title(14)),
-          ],
+              const SizedBox(height: 6),
+              SizedBox(
+                width: double.infinity,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: StrokeText(
+                    item.label,
+                    strokeWidth: 3,
+                    style: AppText.title(14),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

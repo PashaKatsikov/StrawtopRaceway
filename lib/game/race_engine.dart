@@ -100,6 +100,23 @@ class RaceEngine extends ChangeNotifier {
   double get innerRight => trackLeft + trackWidth - railW;
   double get innerWidth => innerRight - innerLeft;
 
+  /// Half-width of the *rendered* top sprite (see `_paintTop` in RacePainter:
+  /// the sprite is drawn at width = topRadius * 2.4, i.e. 20% wider than the
+  /// collision circle on each side).
+  double get _spriteHalfWidth => topRadius * 1.2;
+
+  /// Extra safety margin, in pixels, so the visible chicken sprite stays
+  /// COMFORTABLY inside the wooden lane and never touches the blue side
+  /// rails – not even at the extremes of the drag. Tuned so the sprite has
+  /// a small (~10 px) breathing room on each side of the wood/rail seam.
+  static const double _laneSafetyPx = 10.0;
+
+  /// Left/right screen-space bounds the top's centre may occupy so its
+  /// rendered sprite stays fully within the drivable wooden lane and doesn't
+  /// overlap the blue rails.
+  double get _steerMin => innerLeft + _spriteHalfWidth + _laneSafetyPx;
+  double get _steerMax => innerRight - _spriteHalfWidth - _laneSafetyPx;
+
   void start() {
     _baseSpeed = 210 + _speedStat * 20.0;
     final gs = GameState.instance;
@@ -120,7 +137,12 @@ class RaceEngine extends ChangeNotifier {
   }
 
   void setTargetX(double px) {
-    _targetX = px.clamp(innerLeft + topRadius, innerRight - topRadius);
+    // Guard against being called before the first paint sizes the engine.
+    if (size == Size.zero) {
+      _targetX = px;
+      return;
+    }
+    _targetX = px.clamp(_steerMin, _steerMax);
   }
 
   void nudge(double dx) {
@@ -184,9 +206,10 @@ class RaceEngine extends ChangeNotifier {
       return;
     }
 
-    // Steer easing, then hard-clamp so the top can never leave the lane.
+    // Steer easing, then hard-clamp so the top's rendered sprite can never
+    // leave the wooden lane (i.e. no overlap onto the side rails).
     topX += (_targetX - topX) * math.min(1.0, dt * 11);
-    topX = topX.clamp(innerLeft + topRadius, innerRight - topRadius);
+    topX = topX.clamp(_steerMin, _steerMax);
 
     // Dust puffs behind the top.
     if (_rng.nextDouble() < dt * 22) {

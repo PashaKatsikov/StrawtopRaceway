@@ -32,45 +32,65 @@ class ProfileScreen extends StatelessWidget {
                           Expanded(
                             flex: 4,
                             child: Panel(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    width: 96,
-                                    height: 96,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      gradient: AppColors.blueGradient,
-                                      border: Border.all(
-                                          color: Colors.white, width: 3),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  // Scale the avatar and top sprite down when
+                                  // the available height is tight so the panel
+                                  // content always fits without overflowing.
+                                  final availH = constraints.maxHeight;
+                                  final avatarSize = availH < 360 ? 72.0 : 96.0;
+                                  final topSize   = availH < 360 ? 52.0 : 70.0;
+                                  return SingleChildScrollView(
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                          minHeight: constraints.maxHeight),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            width: avatarSize,
+                                            height: avatarSize,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              gradient: AppColors.blueGradient,
+                                              border: Border.all(
+                                                  color: Colors.white, width: 3),
+                                            ),
+                                            clipBehavior: Clip.antiAlias,
+                                            child: Image.asset(A.mainHero,
+                                                fit: BoxFit.cover),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          StrokeText(gs.playerName,
+                                              style: AppText.title(20)),
+                                          Container(
+                                            margin: const EdgeInsets.only(top: 6),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 14, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              gradient: AppColors.goldGradient,
+                                              borderRadius: BorderRadius.circular(
+                                                  AppRadius.pill),
+                                            ),
+                                            child: Text(
+                                              'LEVEL ${gs.playerLevel}',
+                                              style: AppText.body(13,
+                                                  weight: FontWeight.w900,
+                                                  color: AppColors.ink),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          TopSprite(skin: skin, size: topSize),
+                                          Text(skin.name,
+                                              style: AppText.body(13,
+                                                  color: AppColors.textMuted)),
+                                        ],
+                                      ),
                                     ),
-                                    clipBehavior: Clip.antiAlias,
-                                    child:
-                                        Image.asset(A.mainHero, fit: BoxFit.cover),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  StrokeText(gs.playerName,
-                                      style: AppText.title(22)),
-                                  Container(
-                                    margin: const EdgeInsets.only(top: 6),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 14, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      gradient: AppColors.goldGradient,
-                                      borderRadius:
-                                          BorderRadius.circular(AppRadius.pill),
-                                    ),
-                                    child: Text('LEVEL ${gs.playerLevel}',
-                                        style: AppText.body(13,
-                                            weight: FontWeight.w900,
-                                            color: AppColors.ink)),
-                                  ),
-                                  const SizedBox(height: 14),
-                                  TopSprite(skin: skin, size: 70),
-                                  Text(skin.name,
-                                      style: AppText.body(13,
-                                          color: AppColors.textMuted)),
-                                ],
+                                  );
+                                },
                               ),
                             ),
                           ),
