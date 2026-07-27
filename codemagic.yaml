@@ -12,7 +12,7 @@ workflows:
       groups:
         - appstore_credentials
       vars:
-        BUNDLE_ID: com.strawtop.strawtopRaceway
+        BUNDLE_ID: com.strawtop.racewaygame
         XCODE_WORKSPACE: ios/Runner.xcworkspace
         XCODE_SCHEME: Runner
       flutter: stable
