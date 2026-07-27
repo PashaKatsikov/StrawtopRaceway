@@ -38,6 +38,30 @@
 	     ship any non-standard crypto. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>tel</string>
+		<string>mailto</string>
+	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Strawtop Raceway uses the camera when you choose to add a photo to your racer profile.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Strawtop Raceway lets you pick images to personalize your racer profile.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Your device identifier helps us understand which Strawtop Raceway campaigns bring players to the game.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

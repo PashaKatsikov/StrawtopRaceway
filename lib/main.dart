@@ -1,29 +1,81 @@
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_core/firebase_core.dart';
+
 import 'data/audio_service.dart';
 import 'theme/app_theme.dart';
-import 'screens/loading_screen.dart';
+import 'pitwall/config/track_config.dart';
+import 'pitwall/infra/config_relay.dart';
+import 'pitwall/infra/pit_agent.dart';
+import 'pitwall/infra/pit_vault.dart';
+import 'pitwall/infra/pulse_hub.dart';
+import 'pitwall/infra/reach_probe.dart';
+import 'pitwall/infra/track_attribution.dart';
+import 'pitwall/lane_router.dart';
+import 'pitwall/pages/pit_splash.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _configureSystemChrome();
-  runApp(const StrawtopApp());
+
+  final vault = PitVault();
+  final agent = PitAgent();
+  await Future.wait<void>(<Future<void>>[
+    vault.initialize(),
+    agent.warmUp(),
+  ]);
+
+  // Firebase + App Check are best-effort: attribution and the config POST must
+  // still run if either fails. Only push (FCM) needs Firebase to be ready.
+  var pushServicesReady = false;
+  if (TrackConfig.grayCredentialsReady) {
+    try {
+      await Firebase.initializeApp();
+      pushServicesReady = true;
+    } catch (error) {
+      assert(() {
+        debugPrint('[STW.BOOT] Firebase.initializeApp failed: $error');
+        return true;
+      }());
+    }
+    if (pushServicesReady) {
+      try {
+        await FirebaseAppCheck.instance.activate(
+          providerApple: kDebugMode
+              ? const AppleDebugProvider()
+              : const AppleAppAttestWithDeviceCheckFallbackProvider(),
+        );
+      } catch (error) {
+        assert(() {
+          debugPrint('[STW.BOOT] AppCheck skipped: $error');
+          return true;
+        }());
+      }
+    }
+  }
+
+  final probe = ReachProbe();
+  final pulse = PulseHub(vault, enabled: pushServicesReady);
+  final attribution = TrackAttribution(agent);
+  final router = LaneRouter(
+    vault: vault,
+    probe: probe,
+    attribution: attribution,
+    relay: ConfigRelay(agent, vault),
+    pulse: pulse,
+    agent: agent,
+    runtimeEnabled: TrackConfig.grayCredentialsReady,
+  );
+
+  runApp(StrawtopApp(router: router));
 }
 
-/// Hide OS chrome (status / navigation bar) so the game renders fullscreen.
-///
-/// * Android – `immersiveSticky` hides both the status bar and the nav-gesture
-///   pill, and reveals them briefly on an edge swipe.
-/// * iOS – the same call maps to hiding the status bar via
-///   `setSystemUIOverlays([])`, and the `UIStatusBarHidden=true` /
-///   `UIViewControllerBasedStatusBarAppearance=false` keys in `Info.plist`
-///   make sure it stays hidden across scene transitions.
+/// Hide OS chrome so the game renders fullscreen (unchanged behaviour).
 void _configureSystemChrome() {
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  // A dark transparent status/nav bar so any tiny fringe during transitions
-  // blends with the game's dark background.
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
@@ -34,7 +86,9 @@ void _configureSystemChrome() {
 }
 
 class StrawtopApp extends StatefulWidget {
-  const StrawtopApp({super.key});
+  const StrawtopApp({super.key, required this.router});
+
+  final LaneRouter router;
 
   @override
   State<StrawtopApp> createState() => _StrawtopAppState();
@@ -46,6 +100,7 @@ class _StrawtopAppState extends State<StrawtopApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
   }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -54,25 +109,14 @@ class _StrawtopAppState extends State<StrawtopApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Pause background music only when the app is genuinely minimised.
-    //
-    // Do NOT treat `inactive` as background – on both Android and iOS this
-    // state fires during transient events (in-app navigation, control
-    // centre pull-down, incoming call banner, system permission prompts).
-    // Reacting to it caused music to pause on every screen change and never
-    // resume.
     switch (state) {
       case AppLifecycleState.resumed:
         AudioService.instance.onForeground();
-        // Re-assert immersive fullscreen after the OS restored us: on Android
-        // the nav bar sometimes lingers, and on iOS returning from control
-        // centre briefly re-shows the status bar.
         if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
           SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
         }
         break;
       case AppLifecycleState.inactive:
-        // Transient – leave audio playing.
         break;
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
@@ -88,7 +132,7 @@ class _StrawtopAppState extends State<StrawtopApp> with WidgetsBindingObserver {
       title: 'Strawtop Raceway',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.build(),
-      home: const LoadingScreen(),
+      home: PitSplash(router: widget.router),
     );
   }
 }
