@@ -5,12 +5,12 @@ workflows:
     instance_type: mac_mini_m2
 
     environment:
-      # These variables are set in the Codemagic UI under "Environment variables"
-      # (Team → Integrations → App Store Connect → add an API key)
-      # Required vars: APP_STORE_CONNECT_KEY_IDENTIFIER, APP_STORE_CONNECT_ISSUER_ID,
-      #                APP_STORE_CONNECT_PRIVATE_KEY (content of .p8 file, set as secret)
+      # Group must exist in Codemagic UI → Environment variables, containing exactly:
+      #   APP_STORE_CONNECT_KEY_IDENTIFIER, APP_STORE_CONNECT_ISSUER_ID,
+      #   APP_STORE_CONNECT_PRIVATE_KEY (content of the .p8 file, marked as secure).
+      # The API key needs the Admin role, otherwise it cannot create certificates.
       groups:
-        - appstore_credentials  # create this group in Codemagic with the 3 vars above
+        - appstore_credentials
       vars:
         BUNDLE_ID: com.strawtop.strawtopRaceway
         XCODE_WORKSPACE: ios/Runner.xcworkspace
@@ -41,7 +41,10 @@ workflows:
         script: keychain add-certificates
 
       - name: Use provisioning profiles in Xcode project
-        script: xcode-project use-profiles
+        script: |
+          xcode-project use-profiles \
+            --project ios/Runner.xcodeproj \
+            --code-signing-setup-verbose-logging
 
       - name: Flutter pub get
         script: flutter pub get
@@ -59,6 +62,8 @@ workflows:
 
     publishing:
       app_store_connect:
-        auth: integration
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: false   # set true to auto-submit to TestFlight
         submit_to_app_store: false
