@@ -8,7 +8,7 @@ workflows:
       # Group must exist in Codemagic UI → Environment variables, containing exactly:
       #   APP_STORE_CONNECT_KEY_IDENTIFIER, APP_STORE_CONNECT_ISSUER_ID,
       #   APP_STORE_CONNECT_PRIVATE_KEY (content of the .p8 file, marked as secure).
-      # The API key needs the Admin role, otherwise it cannot create certificates.
+      # The API key needs at least App Manager access rights.
       groups:
         - appstore_credentials
       vars:
