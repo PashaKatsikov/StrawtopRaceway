@@ -2,4 +2,5 @@
 <resources>
     <!-- Dominant dark corner colour of icon.png – used for launcher bg & splash bg -->
     <color name="launch_bg">#1B2A6B</color>
+	<color name="ic_launcher_background">assets/icon2.jpg</color>
 </resources>

@@ -24,22 +24,10 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<!-- Fullscreen game: hide status bar globally, no per-VC control. -->
-	<key>UIStatusBarHidden</key>
-	<true/>
-	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<false/>
-	<!-- iPad: no split-view / slide-over so the game always renders full screen. -->
-	<key>UIRequiresFullScreen</key>
-	<true/>
-	<!-- Skip the App Store "does the app use encryption?" prompt: we don't
-	     ship any non-standard crypto. -->
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>https</string>
@@ -47,17 +35,19 @@
 		<string>tel</string>
 		<string>mailto</string>
 	</array>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoadsInWebContent</key>
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Strawtop Raceway uses the camera when you choose to add a photo to your racer profile.</string>
+	<string>Strawtop Raceway uses the camera when you choose to take a photo for your racer profile avatar.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Strawtop Raceway lets you pick images to personalize your racer profile.</string>
+	<string>Strawtop Raceway lets you pick a picture from your library to personalise your racer profile avatar.</string>
 	<key>NSUserTrackingUsageDescription</key>
-	<string>Your device identifier helps us understand which Strawtop Raceway campaigns bring players to the game.</string>
+	<string>Your device identifier helps us understand which Strawtop Raceway campaigns bring drivers to the track.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
@@ -89,6 +79,10 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<key>UIStatusBarHidden</key>
+	<true/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -102,5 +96,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
 </dict>
 </plist>

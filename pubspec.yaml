@@ -90,10 +90,10 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  remove_alpha_ios: true
-  image_path: "assets/icon.png"
-  adaptive_icon_foreground: "assets/icon.png"
-  adaptive_icon_background: "assets/icon.png"
+  remove_alpha_ios: false
+  image_path: "assets/icon2.jpg"
+  adaptive_icon_foreground: "assets/icon2.jpg"
+  adaptive_icon_background: "assets/icon2.jpg"
   adaptive_icon_foreground_inset: 0
 
   # An image asset can refer to one or more resolution-specific "variants", see

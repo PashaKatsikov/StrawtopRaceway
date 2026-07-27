@@ -44,6 +44,7 @@ class _TrackPortalState extends State<TrackPortal> with WidgetsBindingObserver {
   StreamSubscription<List<ConnectivityResult>>? _networkSub;
   bool _viewportReady = false;
   bool _coldReloadIssued = false;
+  bool _coldRevealed = false;
   bool _offlineShown = false;
   int _redirectAttempts = 0;
   String? _lastMainUrl;
@@ -139,7 +140,11 @@ class _TrackPortalState extends State<TrackPortal> with WidgetsBindingObserver {
     for (final ms in delaysMs) {
       Timer(Duration(milliseconds: ms), () {
         if (!mounted) return;
+        // Re-assert the fixed-scale viewport meta on EVERY poke. Without this
+        // WKWebView keeps the pre-rotation scale (some elements bloat in
+        // landscape and stay bloated on the way back to portrait).
         _controller.runJavaScript(
+          'window.__stwLockViewport && window.__stwLockViewport();'
           'window.dispatchEvent(new Event("orientationchange"));'
           'window.dispatchEvent(new Event("resize"));'
           'if(window.visualViewport)'
@@ -183,18 +188,35 @@ class _TrackPortalState extends State<TrackPortal> with WidgetsBindingObserver {
         _installKeyboardLift();
         _installFocusScaleGuard();
         _installInlinePlayback();
-        Future<void>.delayed(const Duration(milliseconds: 800), () async {
+
+        // Cold-start pass 1: the WebView is still hidden by the black cover
+        // (see build()). WKWebView painted the first frame at the site's own
+        // <meta viewport> scale — reload immediately so the second paint uses
+        // the locked 1:1 viewport we just injected. No delay before reload —
+        // the user does not see this frame anyway.
+        if (widget.coldLaunch && !_coldReloadIssued) {
+          _coldReloadIssued = true;
+          _controller.reload().catchError((_) {});
+          return;
+        }
+
+        // Cold-start pass 2 (reload finished) OR regular warm load.
+        // Warm load keeps the historical 800ms settle window; cold-start
+        // trims it to ~240ms so the reveal happens as soon as the locked
+        // viewport has re-flowed once.
+        final settleMs = widget.coldLaunch ? 240 : 800;
+        Future<void>.delayed(Duration(milliseconds: settleMs), () async {
           if (!mounted) return;
-          setState(() {});
           await _controller.runJavaScript(
+            'window.__stwLockViewport && window.__stwLockViewport();'
             'window.dispatchEvent(new Event("resize"));'
             'window.visualViewport?.dispatchEvent(new Event("resize"));',
-          );
+          ).catchError((_) {});
           _installInsetGuard();
-          if (widget.coldLaunch && !_coldReloadIssued) {
-            _coldReloadIssued = true;
-            await _controller.reload();
-          }
+          if (!mounted) return;
+          setState(() {
+            if (widget.coldLaunch) _coldRevealed = true;
+          });
         });
       },
       onWebResourceError: (error) {
@@ -282,6 +304,11 @@ class _TrackPortalState extends State<TrackPortal> with WidgetsBindingObserver {
     '--safe-top:0px!important;--safe-right:0px!important;',
     '--safe-bottom:0px!important;--safe-left:0px!important;',
     '}',
+    // Kill WebKit's automatic font boosting: without this it kicks in on
+    // rotation → landscape (some text/elements bloat) and the bumped scale
+    // sticks after rotating back to portrait.
+    'html{-webkit-text-size-adjust:100%!important;',
+    'text-size-adjust:100%!important;}',
     'html,body{overscroll-behavior:none!important;',
     'overscroll-behavior-y:none!important;}'
   ].join('');
@@ -334,9 +361,11 @@ class _TrackPortalState extends State<TrackPortal> with WidgetsBindingObserver {
   void _installZoomLock() {
     _controller.runJavaScript(r'''
 (() => {
-  if (window.__stwZoomLock) return;
-  window.__stwZoomLock = true;
-  const lockViewport = () => {
+  // The lockViewport function is exposed globally on every injection so the
+  // native side can call it from didChangeMetrics/_pokeReflow to force
+  // WKWebView back to 1:1 scale after a rotation. The sentinel below only
+  // guards the event-listener setup so we do not stack duplicate handlers.
+  window.__stwLockViewport = () => {
     const host = document.head || document.documentElement;
     if (!host) return;
     let vp = document.querySelector('meta[name="viewport"]');
@@ -349,7 +378,10 @@ class _TrackPortalState extends State<TrackPortal> with WidgetsBindingObserver {
       'width=device-width, initial-scale=1.0, maximum-scale=1.0, ' +
       'minimum-scale=1.0, user-scalable=no, viewport-fit=contain');
   };
-  lockViewport();
+  window.__stwLockViewport();
+  if (window.__stwZoomLock) return;
+  window.__stwZoomLock = true;
+  const lockViewport = window.__stwLockViewport;
   const stop = (e) => { e.preventDefault(); };
   ['gesturestart', 'gesturechange', 'gestureend'].forEach((t) =>
     document.addEventListener(t, stop, {passive: false}));
@@ -479,14 +511,25 @@ class _TrackPortalState extends State<TrackPortal> with WidgetsBindingObserver {
         backgroundColor: Colors.black,
         resizeToAvoidBottomInset: false,
         body: _viewportReady
-            ? Padding(
-                padding: EdgeInsets.only(
-                  top: safe.top,
-                  bottom: safe.bottom,
-                  left: safe.left,
-                  right: safe.right,
-                ),
-                child: WebViewWidget(controller: _controller),
+            ? Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  Padding(
+                    padding: EdgeInsets.only(
+                      top: safe.top,
+                      bottom: safe.bottom,
+                      left: safe.left,
+                      right: safe.right,
+                    ),
+                    child: WebViewWidget(controller: _controller),
+                  ),
+                  // Cold-start cover: hides the first (wrong-scale) paint and
+                  // the intermediate reload frame. Lifted once the zoom lock
+                  // has actually re-flowed the page so the reveal is
+                  // immediately at 1:1.
+                  if (widget.coldLaunch && !_coldRevealed)
+                    const ColoredBox(color: Colors.black),
+                ],
               )
             : const ColoredBox(color: Colors.black),
       ),
