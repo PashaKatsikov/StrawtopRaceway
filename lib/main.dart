@@ -1,100 +1,92 @@
 import 'dart:io' show Platform;
+
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 import 'data/audio_service.dart';
+import 'marshal/flag_book.dart';
+import 'marshal/link/beacon_call.dart';
+import 'marshal/link/intake_feed.dart';
+import 'marshal/link/locker.dart';
+import 'marshal/link/net_watch.dart';
+import 'marshal/link/ping_desk.dart';
+import 'marshal/link/wire_client.dart';
+import 'marshal/stint_plan.dart';
+import 'marshal/trace.dart';
+import 'marshal/view/warmup_page.dart';
 import 'theme/app_theme.dart';
-import 'pitwall/config/track_config.dart';
-import 'pitwall/infra/config_relay.dart';
-import 'pitwall/infra/pit_agent.dart';
-import 'pitwall/infra/pit_vault.dart';
-import 'pitwall/infra/pulse_hub.dart';
-import 'pitwall/infra/reach_probe.dart';
-import 'pitwall/infra/track_attribution.dart';
-import 'pitwall/lane_router.dart';
-import 'pitwall/pages/pit_splash.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  _configureSystemChrome();
+  _pinChrome();
 
-  final vault = PitVault();
-  final agent = PitAgent();
-  await Future.wait<void>(<Future<void>>[
-    vault.initialize(),
-    agent.warmUp(),
-  ]);
+  final locker = Locker();
+  final wire = WireClient();
+  await Future.wait<void>(<Future<void>>[locker.open(), wire.prime()]);
 
-  // Firebase + App Check are best-effort: attribution and the config POST must
-  // still run if either fails. Only push (FCM) needs Firebase to be ready.
-  var pushServicesReady = false;
-  if (TrackConfig.grayCredentialsReady) {
-    try {
-      await Firebase.initializeApp();
-      pushServicesReady = true;
-    } catch (error) {
-      assert(() {
-        debugPrint('[STW.BOOT] Firebase.initializeApp failed: $error');
-        return true;
-      }());
-    }
-    if (pushServicesReady) {
-      try {
-        await FirebaseAppCheck.instance.activate(
-          providerApple: kDebugMode
-              ? const AppleDebugProvider()
-              : const AppleAppAttestWithDeviceCheckFallbackProvider(),
-        );
-      } catch (error) {
-        assert(() {
-          debugPrint('[STW.BOOT] AppCheck skipped: $error');
-          return true;
-        }());
-      }
-    }
-  }
+  final pushLive = FlagBook.ready && await _ignitePush();
 
-  final probe = ReachProbe();
-  final pulse = PulseHub(vault, enabled: pushServicesReady);
-  final attribution = TrackAttribution(agent);
-  final router = LaneRouter(
-    vault: vault,
-    probe: probe,
-    attribution: attribution,
-    relay: ConfigRelay(agent, vault),
-    pulse: pulse,
-    agent: agent,
-    runtimeEnabled: TrackConfig.grayCredentialsReady,
+  final plan = StintPlan(
+    locker: locker,
+    watch: NetWatch(),
+    intake: IntakeFeed(wire),
+    beacon: BeaconCall(wire, locker),
+    ping: PingDesk(locker, live: pushLive),
+    wire: wire,
+    armed: FlagBook.ready,
   );
 
-  runApp(StrawtopApp(router: router));
+  runApp(RacewayRoot(plan: plan));
 }
 
-/// Hide OS chrome so the game renders fullscreen (unchanged behaviour).
-void _configureSystemChrome() {
+/// Firebase and App Check are best-effort: the intake and the beacon still have
+/// to run if either of them fails. Only notifications truly need Firebase.
+Future<bool> _ignitePush() async {
+  try {
+    await Firebase.initializeApp();
+  } catch (error) {
+    gridNote(() => 'mrs:boot firebase unavailable: $error');
+    return false;
+  }
+  try {
+    await FirebaseAppCheck.instance.activate(
+      providerApple: kDebugMode
+          ? const AppleDebugProvider()
+          : const AppleAppAttestWithDeviceCheckFallbackProvider(),
+    );
+  } catch (error) {
+    gridNote(() => 'mrs:boot app check skipped: $error');
+  }
+  return true;
+}
+
+/// Hide the OS chrome so the game renders fullscreen.
+void _pinChrome() {
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: Colors.black,
-    systemNavigationBarIconBrightness: Brightness.light,
-  ));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.black,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
 }
 
-class StrawtopApp extends StatefulWidget {
-  const StrawtopApp({super.key, required this.router});
+class RacewayRoot extends StatefulWidget {
+  const RacewayRoot({super.key, required this.plan});
 
-  final LaneRouter router;
+  final StintPlan plan;
 
   @override
-  State<StrawtopApp> createState() => _StrawtopAppState();
+  State<RacewayRoot> createState() => _RacewayRootState();
 }
 
-class _StrawtopAppState extends State<StrawtopApp> with WidgetsBindingObserver {
+class _RacewayRootState extends State<RacewayRoot> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -115,24 +107,22 @@ class _StrawtopAppState extends State<StrawtopApp> with WidgetsBindingObserver {
         if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
           SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
         }
-        break;
       case AppLifecycleState.inactive:
         break;
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
       case AppLifecycleState.detached:
         AudioService.instance.onBackground();
-        break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Strawtop Raceway',
+      title: FlagBook.appTitle,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.build(),
-      home: PitSplash(router: widget.router),
+      home: WarmupPage(plan: widget.plan),
     );
   }
 }

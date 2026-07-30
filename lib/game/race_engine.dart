@@ -87,15 +87,39 @@ class RaceEngine extends ChangeNotifier {
   bool get boostActive => _boostTimer > 0;
   bool get magnetActive => _magnetTimer > 0;
 
-  // Road fills the ENTIRE screen width; the rails sit right at the edges and the
-  // drivable lane is everything between them. Nothing is ever drawn, driven or
-  // spawned outside of the road.
-  double get trackWidth => size.width;
-  double get trackLeft => 0;
+  // ---- Play field ----------------------------------------------------------
+  // The board is a centred strip laid over the location art, so the kitchen /
+  // school / playground scenery stays visible in the gutters on both sides.
+  // The board is the whole game: the racer, every obstacle and every pickup
+  // live strictly inside the wooden lane between the two rope rails, and
+  // nothing is ever driven or spawned out over the scenery.
+
+  /// Rail thickness as a share of the board width. Matches the proportions of
+  /// the board sprite (see the source crops in RacePainter) so the simulated
+  /// lane lines up exactly with the wood that is actually drawn.
+  static const double _railFactor = 0.156;
+
+  /// Share of the screen the board claims when there is width to spare.
+  static const double _boardShare = 0.55;
+
+  /// Floor for the wooden lane. On a narrow (portrait) screen [_boardShare]
+  /// alone would leave a lane too tight to get past the widest obstacle, so
+  /// the board grows and the gutters shrink instead.
+  static const double _minLaneWidth = 230;
+
+  double get trackWidth {
+    final laneShare = 1 - 2 * _railFactor;
+    return math.min(
+      size.width,
+      math.max(size.width * _boardShare, _minLaneWidth / laneShare),
+    );
+  }
+
+  double get trackLeft => (size.width - trackWidth) / 2;
   double get topRadius => 33;
 
   /// Visual side-barrier thickness; the drivable lane is inset by this each side.
-  double get railW => trackWidth * 0.04;
+  double get railW => trackWidth * _railFactor;
   double get innerLeft => trackLeft + railW;
   double get innerRight => trackLeft + trackWidth - railW;
   double get innerWidth => innerRight - innerLeft;
@@ -214,7 +238,8 @@ class RaceEngine extends ChangeNotifier {
     // Dust puffs behind the top.
     if (_rng.nextDouble() < dt * 22) {
       puffs.add(Puff(
-        topX + (_rng.nextDouble() - 0.5) * 20,
+        (topX + (_rng.nextDouble() - 0.5) * 20)
+            .clamp(innerLeft + 12, innerRight - 12),
         size.height * topYFactor + 18,
       ));
     }
@@ -340,8 +365,16 @@ class RaceEngine extends ChangeNotifier {
     }
   }
 
-  double _laneX(double t) =>
-      innerLeft + topRadius + t * (innerWidth - topRadius * 2);
+  /// Screen X for a spawn at [t] (0 = hard left, 1 = hard right) that keeps a
+  /// sprite [spriteWidth] wide completely inside the wooden lane, so nothing
+  /// ever overhangs a rope rail or lands out on the scenery.
+  double _laneX(double t, double spriteWidth) {
+    final margin = spriteWidth / 2 + 4;
+    final lo = innerLeft + margin;
+    final hi = innerRight - margin;
+    if (hi <= lo) return innerLeft + innerWidth / 2;
+    return lo + t.clamp(0.0, 1.0) * (hi - lo);
+  }
 
   void _spawnObstacle() {
     final t = _rng.nextDouble();
@@ -354,7 +387,8 @@ class RaceEngine extends ChangeNotifier {
     } else {
       type = EntityType.eraser;
     }
-    entities.add(Entity(type, _laneX(t), -70, type == EntityType.pencil ? 86 : 68));
+    final span = type == EntityType.pencil ? 86.0 : 68.0;
+    entities.add(Entity(type, _laneX(t, span), -70, span));
   }
 
   void _spawnPickups() {
@@ -362,12 +396,14 @@ class RaceEngine extends ChangeNotifier {
     if (roll < 0.12) {
       // Power-up.
       final kind = PowerKind.values[_rng.nextInt(PowerKind.values.length)];
-      entities.add(Entity(EntityType.powerup, _laneX(_rng.nextDouble()), -70, 62,
+      entities.add(Entity(
+          EntityType.powerup, _laneX(_rng.nextDouble(), 62), -70, 62,
           power: kind));
       return;
     }
     if (roll < 0.22) {
-      entities.add(Entity(EntityType.star, _laneX(_rng.nextDouble()), -70, 56));
+      entities.add(
+          Entity(EntityType.star, _laneX(_rng.nextDouble(), 56), -70, 56));
       return;
     }
     // A short arc of coins.
@@ -375,7 +411,7 @@ class RaceEngine extends ChangeNotifier {
     final count = 3 + _rng.nextInt(3);
     for (int i = 0; i < count; i++) {
       final t = (baseT + i * 0.06) % 1.0;
-      entities.add(Entity(EntityType.coin, _laneX(t), -70 - i * 52.0, 42));
+      entities.add(Entity(EntityType.coin, _laneX(t, 42), -70 - i * 52.0, 42));
       _coinsSpawned++;
     }
   }

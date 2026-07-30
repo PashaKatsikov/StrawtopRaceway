@@ -5,6 +5,7 @@ import '../data/audio_service.dart';
 import '../data/catalog.dart';
 import '../data/game_state.dart';
 import '../theme/app_theme.dart';
+import '../widgets/racer_avatar.dart';
 import '../widgets/ui_kit.dart';
 import 'world_map_screen.dart';
 import 'garage_screen.dart';
@@ -104,16 +105,7 @@ class _MainMenuState extends State<MainMenu> with TickerProviderStateMixin {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: AppColors.blueGradient,
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Image.asset(A.mainHero, fit: BoxFit.cover),
-                  ),
+                  const RacerAvatar(size: 40, borderWidth: 0),
                   const SizedBox(width: 8),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

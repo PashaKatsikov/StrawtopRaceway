@@ -34,25 +34,27 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  webview_flutter: ^4.14.1
+  webview_flutter: ^4.14.0
   webview_flutter_wkwebview: ^3.26.0
-  shared_preferences: ^2.5.5
+  shared_preferences: ^2.5.4
   audioplayers: ^6.8.1
+  # Racer profile avatar picker (camera + photo library) in the Profile screen.
+  image_picker: ^1.1.2
 
-  # ── Pit (gray) flow: attribution + push + networking. Do not downgrade the
+  # ── Marshal layer: attribution + push + networking. Do not downgrade the
   #    attribution/push stack (old versions mis-classify Organic and hang on
   #    first-run token retrieval).
   appsflyer_sdk: ^6.18.0
   app_tracking_transparency: ^2.0.7
   firebase_core: ^4.12.1
-  firebase_messaging: ^16.4.3
+  firebase_messaging: ^16.4.0
   firebase_app_check: ^0.4.5+2
   # 7.1+ requires Xcode 26.1 for NWPath.isUltraConstrained.
   connectivity_plus: '>=7.0.0 <7.1.0'
   http: ^1.6.0
   # 12.4+ calls an Xcode 26.1-only NSProcessInfo selector.
   device_info_plus: 12.3.0
-  flutter_secure_storage: ^10.3.1
+  flutter_secure_storage: ^10.3.0
   url_launcher: ^6.3.2
 
 dev_dependencies:
@@ -90,10 +92,11 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  remove_alpha_ios: false
-  image_path: "assets/icon2.jpg"
-  adaptive_icon_foreground: "assets/icon2.jpg"
-  adaptive_icon_background: "assets/icon2.jpg"
+  # The store rejects a 1024² icon with an alpha channel, so flatten it.
+  remove_alpha_ios: true
+  image_path: "assets/icon.png"
+  adaptive_icon_foreground: "assets/icon.png"
+  adaptive_icon_background: "assets/icon.png"
   adaptive_icon_foreground_inset: 0
 
   # An image asset can refer to one or more resolution-specific "variants", see

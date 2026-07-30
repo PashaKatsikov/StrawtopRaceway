@@ -13,10 +13,19 @@ class GameState extends ChangeNotifier {
   SharedPreferences? _prefs;
   static const String _key = 'strawtop_save_v1';
 
+  /// The profile avatar photo lives under its own key so it never bloats the
+  /// (frequently rewritten) main save blob. Kept as base64 of a small JPEG.
+  static const String _avatarKey = 'strawtop_avatar_v1';
+
   // ---- Player wallet & profile --------------------------------------------
   int coins = 300;
   int gems = 20;
   String playerName = 'Racer';
+
+  /// Decoded avatar photo bytes, or null when the player uses the default art.
+  Uint8List? avatarPhoto;
+
+  bool get hasAvatarPhoto => avatarPhoto != null && avatarPhoto!.isNotEmpty;
 
   // ---- Ownership -----------------------------------------------------------
   Set<String> ownedTops = {'rookie'};
@@ -57,7 +66,34 @@ class GameState extends ChangeNotifier {
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
     _load();
+    _loadAvatar();
     _ensureDaily();
+  }
+
+  void _loadAvatar() {
+    final encoded = _prefs?.getString(_avatarKey);
+    if (encoded == null || encoded.isEmpty) return;
+    try {
+      avatarPhoto = base64Decode(encoded);
+    } catch (_) {
+      avatarPhoto = null;
+    }
+  }
+
+  /// Stores the chosen profile photo (already downscaled by the picker).
+  Future<void> setAvatarPhoto(Uint8List bytes) async {
+    avatarPhoto = bytes;
+    notifyListeners();
+    try {
+      await _prefs?.setString(_avatarKey, base64Encode(bytes));
+    } catch (_) {}
+  }
+
+  /// Drops the custom photo and falls back to the default racer art.
+  Future<void> clearAvatarPhoto() async {
+    avatarPhoto = null;
+    notifyListeners();
+    await _prefs?.remove(_avatarKey);
   }
 
   int get totalStars =>
@@ -332,6 +368,8 @@ class GameState extends ChangeNotifier {
     claimedAchievements = {};
     dailyProgress = {};
     dailyClaimed = {};
+    avatarPhoto = null;
+    _prefs?.remove(_avatarKey);
     _save();
     notifyListeners();
   }

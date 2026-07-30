@@ -3,7 +3,12 @@ import UIKit
 import UserNotifications
 
 class SceneDelegate: FlutterSceneDelegate {
-  static let launchLinkKey = "flutter.stw_launch_link"
+  /// Must stay in sync with `BootLink._entryKey` on the Dart side, including
+  /// the `flutter.` prefix the preferences bridge expects.
+  static let entryKey = "flutter.rw_grid_entry"
+
+  private static let directKeys = ["deep_link", "target", "url", "deeplink", "link"]
+  private static let nestedKeys = ["payload", "data"]
 
   override func scene(
     _ scene: UIScene,
@@ -14,41 +19,37 @@ class SceneDelegate: FlutterSceneDelegate {
 
     guard
       let response = connectionOptions.notificationResponse,
-      let destination = Self.destination(
+      let entry = Self.entry(
         inside: response.notification.request.content.userInfo
       )
     else { return }
 
     let defaults = UserDefaults.standard
-    defaults.set(destination, forKey: Self.launchLinkKey)
+    defaults.set(entry, forKey: Self.entryKey)
     defaults.synchronize()
 
     #if DEBUG
-    NSLog("[STW.ROUTE] captured notification destination")
+    NSLog("[mrs:scene] parked launch entry")
     #endif
   }
 
-  private static func destination(
-    inside payload: [AnyHashable: Any]
-  ) -> String? {
-    let candidates = ["deep_link", "target", "url", "deeplink", "link"]
+  private static func entry(inside payload: [AnyHashable: Any]) -> String? {
+    if let direct = trimmedValue(in: payload) { return direct }
 
-    func firstValue(in dictionary: [AnyHashable: Any]) -> String? {
-      for candidate in candidates {
-        guard let value = dictionary[candidate] as? String else { continue }
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty { return trimmed }
-      }
-      return nil
-    }
-
-    if let direct = firstValue(in: payload) { return direct }
-
-    for container in ["payload", "data"] {
-      if let nested = payload[container] as? [AnyHashable: Any],
-         let value = firstValue(in: nested) {
+    for branch in nestedKeys {
+      if let nested = payload[branch] as? [AnyHashable: Any],
+         let value = trimmedValue(in: nested) {
         return value
       }
+    }
+    return nil
+  }
+
+  private static func trimmedValue(in source: [AnyHashable: Any]) -> String? {
+    for key in directKeys {
+      guard let raw = source[key] as? String else { continue }
+      let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+      if !trimmed.isEmpty { return trimmed }
     }
     return nil
   }

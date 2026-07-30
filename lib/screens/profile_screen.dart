@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import '../data/assets.dart';
 import '../data/audio_service.dart';
 import '../data/catalog.dart';
 import '../data/game_state.dart';
 import '../theme/app_theme.dart';
+import '../widgets/racer_avatar.dart';
 import '../widgets/ui_kit.dart';
+import 'avatar_photo_sheet.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -49,18 +50,14 @@ class ProfileScreen extends StatelessWidget {
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
-                                          Container(
-                                            width: avatarSize,
-                                            height: avatarSize,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              gradient: AppColors.blueGradient,
-                                              border: Border.all(
-                                                  color: Colors.white, width: 3),
-                                            ),
-                                            clipBehavior: Clip.antiAlias,
-                                            child: Image.asset(A.mainHero,
-                                                fit: BoxFit.cover),
+                                          RacerAvatar(
+                                            size: avatarSize,
+                                            showBadge: true,
+                                            onTap: () async {
+                                              AudioService.instance.click();
+                                              await AvatarPhotoSheet.present(
+                                                  context);
+                                            },
                                           ),
                                           const SizedBox(height: 8),
                                           StrokeText(gs.playerName,

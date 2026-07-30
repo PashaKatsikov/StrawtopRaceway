@@ -3,36 +3,37 @@ import 'package:flutter/services.dart';
 
 import '../../theme/app_theme.dart';
 import '../../widgets/ui_kit.dart';
-import '../config/track_config.dart';
-import '../infra/pit_vault.dart';
-import '../infra/pulse_hub.dart';
-import 'pit_button.dart';
+import '../flag_book.dart';
+import '../link/locker.dart';
+import '../link/ping_desk.dart';
+import 'press_button.dart';
 
-/// Push opt-in promo shown before the WebView on first entry into gray mode.
-class AlertOptin extends StatefulWidget {
-  const AlertOptin({
+/// Notification promo shown once before the board view on the first attributed
+/// launch. Declining only silences the prompt for a while — never forever.
+class PingPage extends StatefulWidget {
+  const PingPage({
     super.key,
-    required this.vault,
-    required this.pulse,
-    required this.nextBuilder,
+    required this.locker,
+    required this.desk,
+    required this.next,
   });
 
-  final PitVault vault;
-  final PulseHub pulse;
-  final WidgetBuilder nextBuilder;
+  final Locker locker;
+  final PingDesk desk;
+  final WidgetBuilder next;
 
   @override
-  State<AlertOptin> createState() => _AlertOptinState();
+  State<PingPage> createState() => _PingPageState();
 }
 
-class _AlertOptinState extends State<AlertOptin> {
-  bool _working = false;
+class _PingPageState extends State<PingPage> {
+  bool _busy = false;
 
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    // The splash locks orientation right before routing here — re-enable both.
+    // The splash pins orientation right before routing here — allow both again.
     SystemChrome.setPreferredOrientations(const <DeviceOrientation>[
       DeviceOrientation.portraitUp,
       DeviceOrientation.landscapeLeft,
@@ -40,38 +41,39 @@ class _AlertOptinState extends State<AlertOptin> {
     ]);
   }
 
-  Future<void> _accept() async {
-    if (_working) return;
-    setState(() => _working = true);
-    final granted = await widget.pulse.askPermission();
-    if (!granted) await _snooze();
-    _continue();
+  Future<void> _agree() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final granted = await widget.desk.askConsent();
+    if (!granted) await _quiet();
+    _forward();
   }
 
-  Future<void> _skip() async {
-    if (_working) return;
-    setState(() => _working = true);
-    await _snooze();
-    _continue();
+  Future<void> _pass() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    await _quiet();
+    _forward();
   }
 
-  Future<void> _snooze() {
+  Future<void> _quiet() {
     final until = DateTime.now().millisecondsSinceEpoch ~/ 1000 +
-        TrackConfig.pushSnoozeSeconds;
-    return widget.vault.snoozePushInvite(until);
+        FlagBook.pingQuietSeconds;
+    return widget.locker.quietPing(until);
   }
 
-  void _continue() {
+  void _forward() {
     if (!mounted) return;
-    Navigator.of(context)
-        .pushReplacement(MaterialPageRoute<void>(builder: widget.nextBuilder));
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(builder: widget.next),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
-    final landscape = media.orientation == Orientation.landscape;
-    final btnWidth = landscape
+    final wide = media.orientation == Orientation.landscape;
+    final buttonWidth = wide
         ? (media.size.width * 0.42).clamp(300.0, 520.0)
         : (media.size.width * 0.80).clamp(280.0, 440.0);
 
@@ -83,27 +85,30 @@ class _AlertOptinState extends State<AlertOptin> {
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: 28,
-              vertical: landscape ? 12 : 28,
+              vertical: wide ? 12 : 28,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Container(
-                  width: landscape ? 92 : 116,
-                  height: landscape ? 92 : 116,
+                  width: wide ? 92 : 116,
+                  height: wide ? 92 : 116,
                   decoration: BoxDecoration(
                     gradient: AppColors.goldGradient,
                     shape: BoxShape.circle,
                     border: Border.all(color: AppColors.ink, width: 3),
                     boxShadow: AppShadow.glow(AppColors.yellow, strength: 0.55),
                   ),
-                  child: Icon(Icons.notifications_active_rounded,
-                      color: Colors.white, size: landscape ? 48 : 60),
+                  child: Icon(
+                    Icons.notifications_active_rounded,
+                    color: Colors.white,
+                    size: wide ? 48 : 60,
+                  ),
                 ),
-                SizedBox(height: landscape ? 16 : 24),
+                SizedBox(height: wide ? 16 : 24),
                 StrokeText(
                   'ALLOW NOTIFICATIONS ABOUT\nBONUSES AND PROMOS',
-                  style: AppText.title(landscape ? 22 : 25),
+                  style: AppText.title(wide ? 22 : 25),
                   strokeWidth: 4,
                 ),
                 const SizedBox(height: 12),
@@ -112,27 +117,27 @@ class _AlertOptinState extends State<AlertOptin> {
                   textAlign: TextAlign.center,
                   style: AppText.body(16, color: AppColors.textMuted),
                 ),
-                SizedBox(height: landscape ? 20 : 30),
-                PitButton(
-                  width: btnWidth,
+                SizedBox(height: wide ? 20 : 30),
+                PressButton(
+                  width: buttonWidth,
                   label: 'Accept',
                   icon: Icons.check_rounded,
                   gradient: AppColors.greenGradient,
                   lip: AppColors.greenDark,
-                  height: landscape ? 62 : 70,
-                  fontSize: landscape ? 22 : 24,
-                  busy: _working,
-                  onTap: _accept,
+                  height: wide ? 62 : 70,
+                  fontSize: wide ? 22 : 24,
+                  busy: _busy,
+                  onTap: _agree,
                 ),
-                SizedBox(height: landscape ? 12 : 16),
-                PitButton(
-                  width: btnWidth * 0.9,
+                SizedBox(height: wide ? 12 : 16),
+                PressButton(
+                  width: buttonWidth * 0.9,
                   label: 'Skip',
                   gradient: AppColors.sunsetGradient,
                   lip: AppColors.redDark,
-                  height: landscape ? 56 : 62,
-                  fontSize: landscape ? 20 : 22,
-                  onTap: _working ? () {} : _skip,
+                  height: wide ? 56 : 62,
+                  fontSize: wide ? 20 : 22,
+                  onTap: _busy ? () {} : _pass,
                 ),
               ],
             ),

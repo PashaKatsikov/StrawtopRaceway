@@ -1,17 +1,34 @@
-# strawtop_raceway
+# Strawtop Raceway
 
-A new Flutter project.
+A cartoon spinning-top racing game for iOS, built with Flutter. Launch your top
+down hand-drawn tracks across three worlds — the Kitchen, the School Desk and
+the Playground — dodging obstacles, grabbing coins and chasing a three-star
+finish on every level.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- Physics-flavoured top racing with boost, shield and magnet power-ups
+- Three worlds of hand-drawn levels, unlocked by earning stars
+- Garage with collectable tops, each upgradable across speed, stability and power
+- Shop, daily challenges, achievements and a local leaderboard
+- Player profile with race, win, star and coin statistics
+- Works fully offline: all progress is stored on the device
 
-A few resources to get you started if this is your first Flutter project:
+## Running the project
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+flutter pub get
+cd ios && pod install && cd ..
+flutter run --release
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+The game is landscape-only in play and targets iOS. Push notifications,
+attribution and the tracking prompt only behave correctly on a real device, so
+use hardware rather than the Simulator for a full pass.
+
+## Layout
+
+- `lib/screens/`, `lib/game/`, `lib/widgets/`, `lib/theme/` — menus, race loop and UI kit
+- `lib/data/` — save state, catalog, audio and image loading
+- `lib/marshal/` — launch pipeline: connectivity, install intake, notifications
+- `tool/` — asset and value generators used at build time

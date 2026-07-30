@@ -13,24 +13,31 @@ class RacePainter extends CustomPainter {
   final ImageBank bank = ImageBank.instance;
 
   // Source regions sampled from direct_road.webp (a framed board sprite).
-  // The board art has three printed white chevrons baked into it (roughly at
-  // height fractions 0.152-0.308, 0.402-0.561 and 0.647-0.806). The wood
-  // sample MUST sit entirely in a clean gap between them – a previous crop
-  // (0.275-0.385) clipped into the tail of the first chevron, so every time
-  // that tile repeated it showed a mangled sliver of a chevron that looked
-  // like a glitching/blinking triangle right after the start. This crop sits
-  // safely inside the gap between chevron 1 and chevron 2, with margin to
-  // spare on both sides, and (like before) well clear of the rope corners.
-  static const double _woodL = 0.150;
-  static const double _woodR = 0.850;
+  //
+  // The board itself only occupies x 0.283-0.715 of the 1024² sprite; the rest
+  // is empty margin. Crops MUST stay inside that span – an earlier wood crop
+  // (0.150-0.850) reached into the empty margin and over both rope rails, so
+  // stretching it across the lane punched transparent holes at the sides and
+  // printed a second pair of rails in the middle of the board. That is what
+  // made the drawn field far narrower than the field the engine simulated.
+  //
+  // The board art also has three printed white chevrons baked into it. The
+  // wood sample MUST sit entirely in a clean gap between them – a previous
+  // crop clipped into the tail of the first chevron, so every repeat showed a
+  // mangled sliver that looked like a glitching triangle. This crop sits
+  // safely inside the gap between chevron 1 and chevron 2.
+  static const double _woodL = 0.3516;
+  static const double _woodR = 0.6455;
   static const double _woodT = 0.320;
   static const double _woodB = 0.390;
-  static const double _railLL = 0.055;
-  static const double _railLR = 0.140;
-  static const double _railRL = 0.860;
-  static const double _railRR = 0.945;
-  static const double _railT = 0.300;
-  static const double _railB = 0.580;
+  static const double _railLL = 0.2832;
+  static const double _railLR = 0.3496;
+  static const double _railRL = 0.6465;
+  static const double _railRR = 0.7148;
+  // Cut from the middle of one gold rope tie to the middle of another, so the
+  // repeating rope lands in phase instead of splicing mid-segment.
+  static const double _railT = 0.1758;
+  static const double _railB = 0.4375;
 
   @override
   void paint(Canvas canvas, Size size) {
